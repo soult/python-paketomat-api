@@ -274,3 +274,45 @@ class PaketomatBrowser:
 
         req = self._sess.get(match.group(1))
         return req.content
+
+    def cancel_parcel(self, tracking_number):
+        body = {
+            "mandant": "",
+            "knr": "",
+            "pnr": tracking_number,
+            "name": "",
+            "lfnr": "",
+            "rnr": "",
+            "strasse": "",
+            "vdat": "01.01.1970",
+            "dpd": "DPD",
+            "plz": "",
+            "land": "",
+            "bdat": "18.01.2036",
+            "pt": "Primetime",
+            "ort": "",
+            "vgew": "von",
+            "bgew": "bis",
+            "storniert": "storniert",
+            "sortNach": "paknr",
+            "sortWie": "asc",
+        }
+        req = self._sess.post("http://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=self._encode_body(body))
+
+        match = re.search(r"<table id=\"searchResultTable\" .*?>\s+<thead>.*?</thead>\s+<tbody>(.+?)</tbody>\s+</table>", req.text, re.DOTALL)
+        if not match:
+            raise PaketomatException("Unable to find search result table")
+        results_table = match.group(1)
+
+        match = re.search(r"onclick=\"doStorno\(this, '([0-9]+)', '([0-9]+[0-9A-Z])'\);\"", results_table)
+        if not match:
+            raise PaketomatException("Unable to find storno link")
+
+        body = {
+            "id": match.group(1),
+            "paknr": match.group(2),
+        }
+        req = self._sess.post("http://web.paketomat.at/archiv/ajax/doStorno.php", data=self._encode_body(body))
+
+        if req.status_code != 200:
+            raise PaketomatException("Unexpected status code %i" % req.status_code)

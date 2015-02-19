@@ -32,7 +32,7 @@ class Recipient:
 class Route:
 
     def __init__(self, *args, **kwargs):
-        for k in ["osort", "dsort", "ddepot", "service", "service_text", "country_code", "numeric_country_code", "plz", "usedversion", "iata", "groupingpriority", "router", "code"]:
+        for k in ["ausgDepot", "osort", "dsort", "ddepot", "service", "service_text", "country_code", "numeric_country_code", "plz", "usedversion", "iata", "groupingpriority", "router", "code"]:
             self.__dict__[k] = kwargs.get(k)
 
         if not self.router:
@@ -211,6 +211,7 @@ class PaketomatBrowser:
             raise NoRouteException()
 
         return Route(
+            ausgDepot=data["ausgDepot"],
             osort=data["osort"],
             dsort=data["dsort"],
             ddepot=data["ddepot"],
@@ -237,6 +238,7 @@ class PaketomatBrowser:
             "lfnr": reference_numbers[0] if reference_numbers else "",
             "lfnummern": "~".join(reference_numbers) if reference_numbers else "",
             "rnrnummern": "~".join(invoice_numbers) if invoice_numbers else "",
+            "ausgDepot": route.ausgDepot,
             "versanddat": date.strftime("%d.%m.%Y"),
             "versandart": "DPD", # FIXME
             "nummer": recipient.customer_id,

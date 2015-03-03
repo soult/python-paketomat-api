@@ -242,7 +242,7 @@ class PaketomatBrowser:
             "versanddat": date.strftime("%d.%m.%Y"),
             "versandart": "DPD", # FIXME
             "nummer": recipient.customer_id,
-            "landort": "%s-%s-%s" % (recipient.country_code, recipient.postal_code, recipient.city),
+            "landort": "%s-%s-%s" % (recipient.country_code, recipient.postal_code, recipient.city.replace("-", "/")),
             "name": recipient.name,
             "zusatz": recipient.additional or "",
             "emailaviso": recipient.email or "",

@@ -1,3 +1,4 @@
+from decimal import Decimal
 import html.parser
 import re
 import requests
@@ -187,6 +188,40 @@ class PaketomatBrowser:
             raise PaketomatException("Unable to find tracking number")
         return match.group(1).replace(" ", "")
 
+    def get_business_account(self):
+        body = {
+            "mandant": "",
+            "knr": "",
+            "pnr": "",
+            "name": "",
+            "lfnr": "",
+            "rnr": "",
+            "strasse": "",
+            "vdat": "01.01.1970",
+            "dpd": "DPD",
+            "plz": "",
+            "land": "",
+            "bdat": "18.01.2036",
+            "pt": "Primetime",
+            "ort": "",
+            "vgew": "von",
+            "bgew": "bis",
+            "storniert": "storniert",
+            "sortNach": "paknr",
+            "sortWie": "asc",
+        }
+        req = self._sess.post("http://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=self._encode_body(body))
+
+        match = re.search(r"<table id=\"searchResultTable\" .*?>\s+<thead>.*?</thead>\s+<tbody>(.+?)</tbody>\s+</table>", req.text, re.DOTALL)
+        if not match:
+            raise PaketomatException("Unable to find search result table")
+        results_table = match.group(1)
+
+        match = re.search(r"onclick=\"openBusiness\('[0-9]+', '[0-9]+' , '.+' , '([0-9]+)','(.+)'\);\"", results_table)
+        if not match:
+            raise PaketomatException("Unable to find DPD Business password")
+        return match.groups()
+
     def find_route(self, sender_id, recipient, weight):
         body = {
             "r": recipient.customer_id,
@@ -276,6 +311,21 @@ class PaketomatBrowser:
 
         req = self._sess.get(match.group(1))
         return req.content
+
+    def get_parcel_weight(self, tracking_number):
+        if not hasattr(self, "business_account"):
+            self._business_account = self.get_business_account()
+
+        params = {
+            "pknr": tracking_number,
+            "u": self._business_account[0],
+            "p2": self._business_account[1],
+        }
+        req = requests.get("http://www.dpd-business.at/strack.php", params=params)
+        match = re.search(r"<br>&nbsp;Gewicht:&nbsp; ([0-9]+(?:\.[0-9]+)?) kg<br>", req.text)
+        if not match:
+            raise PaketomatException("No weight information found")
+        return Decimal(match.group(1))
 
     def cancel_parcel(self, tracking_number):
         body = {

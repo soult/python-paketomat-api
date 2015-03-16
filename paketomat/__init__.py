@@ -322,7 +322,7 @@ class PaketomatBrowser:
             "p2": self._business_account[1],
         }
         req = requests.get("http://www.dpd-business.at/strack.php", params=params)
-        match = re.search(r"<br>&nbsp;Gewicht:&nbsp; ([0-9]+(?:\.[0-9]+)?) kg<br>", req.text)
+        match = re.search(r"<br>&nbsp;Gewicht:&nbsp; ([0-9]+(?:\.[0-9]+)?) kg", req.text)
         if not match:
             raise PaketomatException("No weight information found")
         return Decimal(match.group(1))

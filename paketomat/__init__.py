@@ -217,7 +217,7 @@ class PaketomatBrowser:
             raise PaketomatException("Unable to find search result table")
         results_table = match.group(1)
 
-        match = re.search(r"onclick=\"openBusiness\('[0-9]+', '[0-9]+' , '.+' , '([0-9]+)','(.+)'\);\"", results_table)
+        match = re.search(r"onclick=\"openBusiness\(\s*'[0-9]+', '[0-9]+' , '.+' , '([0-9]+)','(.+)'\);\"", results_table)
         if not match:
             raise PaketomatException("Unable to find DPD Business password")
         return match.groups()

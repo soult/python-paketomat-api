@@ -1,38 +1,45 @@
 from decimal import Decimal
-import html.parser
+import html
 import re
 import requests
+
 
 class PaketomatException(Exception):
     pass
 
+
 class LoginFailedException(PaketomatException):
     pass
+
 
 class RecipientAlreadyExistsException(PaketomatException):
     pass
 
+
 class NoRouteException(PaketomatException):
     pass
 
+
 class Sender:
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         for k in ["sender_id", "name", "address", "customer_id", "depot"]:
             self.__dict__[k] = kwargs.get(k)
 
     def __str__(self):
         return self.name
 
+
 class Recipient:
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         for k in ["customer_id", "name", "additional", "contact_person", "phonenumber", "street", "postal_code", "city", "country_code", "email"]:
             self.__dict__[k] = kwargs.get(k)
 
+
 class Route:
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         for k in ["ausgDepot", "osort", "dsort", "ddepot", "service", "service_text", "country_code", "numeric_country_code", "plz", "usedversion", "iata", "groupingpriority", "router", "code"]:
             self.__dict__[k] = kwargs.get(k)
 
@@ -46,13 +53,15 @@ class Route:
                 if self.groupingpriority:
                     self.code += "-%s" % self.groupingpriority
 
+
 class PaketomatBrowser:
 
     PRINTER_NAME = "Gutenberg Printing Press"
 
     def __init__(self):
+        self._business_account = None
         self._sess = requests.Session()
-        req = self._sess.get("http://web.paketomat.at/")
+        self._sess.get("http://web.paketomat.at/")
 
     def _encode_body(self, body):
         return [(str(x[0]).encode("iso8859-1"), str(x[1]).encode("iso8859-1")) for x in body.items()]
@@ -65,7 +74,7 @@ class PaketomatBrowser:
             "clientUsername": "PaketomatBrowser",
             "printerlist": self.PRINTER_NAME + ";",
             "username": username,
-            "passwort": password, # Note the t
+            "passwort": password,
             "anmelden": "Anmelden",
         }
         req = self._sess.post("http://web.paketomat.at/", data=self._encode_body(body))
@@ -132,10 +141,9 @@ class PaketomatBrowser:
             mandanten[match.group(2)] = int(match.group(1))
 
         req = self._sess.get("http://web.paketomat.at/settings/mandanten.php")
-        text = req.text.replace("\r", "\n") # Fuuuuuu
+        text = req.text.replace("\r", "\n")
 
         senders = []
-        hp = html.parser.HTMLParser()
 
         for match in re.finditer(r"<tr class='(?:even|odd)'>\s+"
                                   "<td align=\"left\" style=\"\">[0-9]+</td>\s+"
@@ -145,10 +153,10 @@ class PaketomatBrowser:
                                   "<td align=\"left\" style=\"\">(.+?)</td>\s+</tr>", text):
             sender = Sender(
                 sender_id=mandanten[match.group(1)],
-                name=hp.unescape(match.group(1)),
-                address=hp.unescape(match.group(2)),
+                name=html.unescape(match.group(1)),
+                address=html.unescape(match.group(2)),
                 customer_id=int(match.group(3)),
-                depot=hp.unescape(match.group(4))
+                depot=html.unescape(match.group(4))
             )
             senders.append(sender)
 
@@ -275,7 +283,7 @@ class PaketomatBrowser:
             "rnrnummern": "~".join(invoice_numbers) if invoice_numbers else "",
             "ausgDepot": route.ausgDepot,
             "versanddat": date.strftime("%d.%m.%Y"),
-            "versandart": "DPD", # FIXME
+            "versandart": "DPD",
             "nummer": recipient.customer_id,
             "landort": "%s-%s-%s" % (recipient.country_code, recipient.postal_code, recipient.city.replace("-", "/")),
             "name": recipient.name,
@@ -313,7 +321,7 @@ class PaketomatBrowser:
         return req.content
 
     def get_parcel_weight(self, tracking_number):
-        if not hasattr(self, "business_account"):
+        if not self._business_account:
             self._business_account = self.get_business_account()
 
         params = {

@@ -11,5 +11,6 @@ setup(
     author="David Triendl",
     author_email="david@triendl.name",
     packages=["paketomat"],
+    python_requires=">=3.4.0",
     install_requires=["requests>=2.0.0"],
 )

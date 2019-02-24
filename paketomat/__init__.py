@@ -3,6 +3,8 @@ import html
 import re
 import requests
 
+PREDICT_EMAIL = "email"
+PREDICT_SMS = "SMS"
 
 class PaketomatException(Exception):
     pass
@@ -270,7 +272,7 @@ class PaketomatBrowser:
             code=data.get("code"),
         )
 
-    def create_parcel(self, date, sender_id, route, recipient, weight, reference_numbers=None, invoice_numbers=None):
+    def create_parcel(self, date, sender_id, route, recipient, weight, predict=None, reference_numbers=None, invoice_numbers=None):
         body = {
             "mandant": sender_id,
             "anzvon": 1,
@@ -306,11 +308,19 @@ class PaketomatBrowser:
             "drucken": "Etikett drucken",
             "aube": "",
         }
-        empty = ["paktyp2", "paktyp3", "paktyp4", "paktyp5", "paktyp6",
+        empty = ["paktyp2", "paktyp3", "paktyp4", "paktyp5", "paktyp6", "paktyp7",
                  "lname", "lzusatz", "lemailaviso", "lbezperson", "ltel", "lstrasse", "lplz", "lort", "lland",
                  ]
         for k in empty:
             body[k] = ""
+
+        if predict:
+            body["paktyp6"] = "PRED"
+            body["smsemail"] = predict
+            if predict == PREDICT_EMAIL:
+                body["prod6Wert"] = recipient.email
+            elif predict == PREDICT_SMS:
+                body["prod6Wert"] = recipient.phonenumber
 
         req = self._sess.post("http://web.paketomat.at/labeldruck/pdf.php", data=self._encode_body(body))
         match = re.search(r"<param name=\"documenturl\" value=\"(http://web.paketomat.at/.*\.pdf)\"/>", req.text)

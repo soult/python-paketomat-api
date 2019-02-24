@@ -65,9 +65,6 @@ class PaketomatBrowser:
         self._sess = requests.Session()
         self._sess.get("https://web.paketomat.at/")
 
-    def _encode_body(self, body):
-        return [(str(x[0]).encode("iso8859-1"), str(x[1]).encode("iso8859-1")) for x in body.items()]
-
     def login(self, username, password):
         body = {
             "doLogin": "true",
@@ -79,7 +76,7 @@ class PaketomatBrowser:
             "passwort": password,
             "anmelden": "Anmelden",
         }
-        req = self._sess.post("https://web.paketomat.at/", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/", data=body)
         match = re.search(r"<div class=\"userInfo\">\s+([0-9]+)\s-", req.text)
         if not (match and match.group(1) == username):
             raise LoginFailedException()
@@ -96,7 +93,7 @@ class PaketomatBrowser:
             "vertikale_ausrichtung": "oben",
             "papier_ausrichtung": "hoch"
         }
-        req = self._sess.post("https://web.paketomat.at/settings/ajax/savePrintConfiguration.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/settings/ajax/savePrintConfiguration.php", data=body)
 
     def create_recipient(self, recipient):
         if not recipient.customer_id:
@@ -119,7 +116,7 @@ class PaketomatBrowser:
             "strasse": recipient.street,
             "email": recipient.email or ""
         }
-        req = self._sess.post("https://web.paketomat.at/kundenstamm/ajax/doSave.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/kundenstamm/ajax/doSave.php", data=body)
         match = re.search(r"<div align='center' class='(?:error|message)'>(.*?)</div>", req.text)
         if not match:
             raise PaketomatException("Unexpected response")
@@ -186,7 +183,7 @@ class PaketomatBrowser:
             "sortNach": "paknr",
             "sortWie": "asc",
         }
-        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=body)
 
         match = re.search(r"<table id=\"searchResultTable\" .*?>\s+<thead>.*?</thead>\s+<tbody>(.+?)</tbody>\s+</table>", req.text, re.DOTALL)
         if not match:
@@ -220,7 +217,7 @@ class PaketomatBrowser:
             "sortNach": "paknr",
             "sortWie": "asc",
         }
-        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=body)
 
         match = re.search(r"<table id=\"searchResultTable\" .*?>\s+<thead>.*?</thead>\s+<tbody>(.+?)</tbody>\s+</table>", req.text, re.DOTALL)
         if not match:
@@ -249,7 +246,7 @@ class PaketomatBrowser:
             "gewicht": weight,
             "versandart": "DPD", # FIXME
         }
-        req = self._sess.post("https://web.paketomat.at/labeldruck/ajax/findRoute.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/labeldruck/ajax/findRoute.php", data=body)
         data = req.json()
 
         if data["ok"] != "ok":
@@ -322,7 +319,7 @@ class PaketomatBrowser:
             elif predict == PREDICT_SMS:
                 body["prod6Wert"] = recipient.phonenumber
 
-        req = self._sess.post("https://web.paketomat.at/labeldruck/pdf.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/labeldruck/pdf.php", data=body)
         match = re.search(r"<param name=\"documenturl\" value=\"(https?://web.paketomat.at/.*\.pdf)\"/>", req.text)
         if not match:
             raise PaketomatException("No PDF file found")
@@ -367,7 +364,7 @@ class PaketomatBrowser:
             "sortNach": "paknr",
             "sortWie": "asc",
         }
-        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStornoSearch.php", data=body)
 
         match = re.search(r"<table id=\"searchResultTable\" .*?>\s+<thead>.*?</thead>\s+<tbody>(.+?)</tbody>\s+</table>", req.text, re.DOTALL)
         if not match:
@@ -382,7 +379,7 @@ class PaketomatBrowser:
             "id": match.group(1),
             "paknr": match.group(2),
         }
-        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStorno.php", data=self._encode_body(body))
+        req = self._sess.post("https://web.paketomat.at/archiv/ajax/doStorno.php", data=body)
 
         if req.status_code != 200:
             raise PaketomatException("Unexpected status code %i" % req.status_code)
